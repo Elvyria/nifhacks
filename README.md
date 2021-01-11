@@ -10,3 +10,4 @@
 * boost-filesystem
 * tinyobjloader
 * fmt
+* fplus
