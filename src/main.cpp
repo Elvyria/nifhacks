@@ -3,13 +3,18 @@
 #include <string>
 #include <string_view>
 #include <filesystem>
+#include <fstream>
 
 #include <fmt/core.h>
+#include <fmt/color.h>
+#include <fmt/ostream.h>
 #include <tiny_obj_loader.h>
 
 #include <NifFile.h>
 
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -34,9 +39,9 @@ std::string replace_all_copy(std::string_view source, std::string_view from, std
     return new_string;
 }
 
-#define WHITE "\033[0m"
-#define RED   "\033[31m"
-#define GREEN "\033[32m"
+const auto WHITE =  fg(fmt::color::white);
+const auto RED = fg(fmt::color::red);
+const auto GREEN = fg(fmt::color::green);
 
 int transfer_vertices(const std::string &obj_filename, const std::string &nif_filename) {
 	tinyobj::attrib_t attributes;
@@ -79,7 +84,7 @@ int transfer_vertices(const std::string &obj_filename, const std::string &nif_fi
 	return 0;
 }
 
-void export_shape(std::FILE* stream, NiShape &shape, int v_offset = 1, int vt_offset = 1, int vn_offset = 1) {
+void export_shape(std::fstream &stream, NiShape &shape, int v_offset = 1, int vt_offset = 1, int vn_offset = 1) {
 	const std::vector<Vector3>* vertices = shape.get_vertices();
 	const std::vector<Vector2>* uv = shape.get_uv();
 	const std::vector<Vector3>* normals = shape.get_normals(false);
@@ -154,17 +159,13 @@ int export_shape(const std::string &nif_filename, const std::string &obj_filenam
 	auto shape = nifile.FindBlockByName<NiShape>(shape_name);
 
 	if (shape) {
-		FILE* obj_file;
-		fopen_s(&obj_file, obj_filename.c_str(), "w");
-
-		export_shape(obj_file, *shape, 1, 1, 1);
-
-		fclose(obj_file);
+        std::fstream obj_file(obj_filename, std::ios_base::out);
+        export_shape(obj_file, *shape, 1, 1, 1);
 
 		return 0;
 	}
 
-	return 1;
+    return 1;
 }
 
 #ifdef _WIN32
@@ -206,23 +207,20 @@ int main(int argc, char *argv[]) {
 	fs::path source_path (source);
 	fs::path target_path (target);
 
-	auto source_extension = source_path.extension().string();
-	auto target_extension = target_path.extension().string();
-	
-	if (strcmp(source_extension.c_str(), ".obj") == 0 && strcmp(target_extension.c_str(), ".nif") == 0)
+    const auto source_extension = source_path.extension();
+    const auto target_extension = target_path.extension();
+
+    if (source_path.extension() == ".obj" && target_path.extension() == ".nif")
 	{
 		transfer_vertices(source, target);
 	}
-	else if (strcmp(source_extension.c_str(), ".nif") == 0 && strcmp(target_extension.c_str(), ".obj") == 0)
+    else if (source_path.extension() == ".nif" && target_path.extension() == ".obj")
 	{
         if (fs::exists(target)) {
-			fmt::print(RED "Warning! Target already exists and will be overwritten.\n" WHITE);
+            fmt::print(RED, "Warning! Target already exists and will be overwritten.\n");
 		}
 
 		auto nifile = NifFile(source);
-
-		NiShape* shape;
-
 		auto shapes = nifile.GetShapes();
 
 		if (shapes.size() == 0) {
@@ -233,19 +231,20 @@ int main(int argc, char *argv[]) {
 		fmt::print("\n");
 
 		for (size_t i = 0; i < shapes.size(); i++) {
-			fmt::print(GREEN "{}" WHITE ": {}\n", i, shapes[i]->GetName());
+            fmt::print(GREEN, "{}", i);
+            fmt::print(": {}\n", shapes[i]->GetName());
 		}
 
 		fmt::print("\nEnter the number of shape you want to export.\n");
 
-		int index;
+        int index;
 		std::cin >> index;
 
 		if (index < 0 || index >= shapes.size()) {
 			return 1;
 		}
 
-		shape = shapes[index];
+        auto* shape = shapes[index];
 
 		// TODO: Add cli argument
 		// shape = nifile.FindBlockByName<NiShape>(argv[3]);
@@ -256,13 +255,7 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}
 
-		FILE* obj_file;
-		fopen_s(&obj_file, target, "w");
-
+        std::fstream obj_file(target, std::ios::out);
 		export_shape(obj_file, *shape);
-
-		fclose(obj_file);
 	}
-
-
 }
