@@ -153,23 +153,7 @@ void export_shape(std::fstream &stream, NiShape &shape, int v_offset = 1, int vt
 	fmt::print(stream, "\n");
 }
 
-int export_shape(const std::string &nif_filename, const std::string &obj_filename, const std::string &shape_name) {
-	auto nifile = NifFile(nif_filename);
-
-	auto shape = nifile.FindBlockByName<NiShape>(shape_name);
-
-	if (shape) {
-        std::fstream obj_file(obj_filename, std::ios_base::out);
-        export_shape(obj_file, *shape, 1, 1, 1);
-
-		return 0;
-	}
-
-    return 1;
-}
-
 #ifdef _WIN32
-
 void enable_virtual_terminal() {
 	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hOut == INVALID_HANDLE_VALUE) return;
@@ -180,7 +164,6 @@ void enable_virtual_terminal() {
 	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 	if (!SetConsoleMode(hOut, dwMode)) return;
 }
-
 #endif
 
 int main(int argc, char *argv[]) {
