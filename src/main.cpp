@@ -2,8 +2,6 @@
 #include <stdio.h>
 #include <string>
 
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/filesystem.hpp>
 #include <fmt/core.h>
 #include <tiny_obj_loader.h>
 #include <fplus/fplus.hpp>
@@ -12,7 +10,26 @@
 
 #include <Windows.h>
 
-using namespace boost::filesystem;
+std::string replace_all_copy(std::string_view source, std::string_view from, std::string_view to)
+{
+    std::string new_string;
+    new_string.reserve(source.length());  // avoids a few memory allocations
+
+    std::string::size_type last_pos = 0;
+    std::string::size_type find_pos;
+
+    while(std::string::npos != (find_pos = source.find(from, last_pos)))
+    {
+        new_string.append(source, last_pos, find_pos - last_pos);
+        new_string += to;
+        last_pos = find_pos + from.length();
+    }
+
+    // Care for the rest after last occurrence
+    new_string += source.substr(last_pos);
+
+    return new_string;
+}
 
 #define WHITE "\033[0m"
 #define RED   "\033[31m"
@@ -115,8 +132,8 @@ void export_shape(std::FILE* stream, NiShape &shape, int v_offset = 1, int vt_of
 
 	f_format = fmt::format("f {} {} {}\n",
 			f_format,
-			boost::replace_all_copy(f_format, "0", "1"),
-			boost::replace_all_copy(f_format, "0", "2"));
+			replace_all_copy(f_format, "0", "1"),
+			replace_all_copy(f_format, "0", "2"));
 
 	for (auto &f : faces) {
 		fmt::print(stream, f_format,
@@ -177,14 +194,14 @@ int main(int argc, char *argv[]) {
 	auto source = argv[1];
 	auto target = argv[2];
 
-	if (!exists(source)) {
+	if (!fs::exists(source)) {
 		fmt::print("File doesn't exist\n");
 
 		return 1;
 	}
 
-	path source_path (source);
-	path target_path (target);
+	fs::path source_path (source);
+	fs::path target_path (target);
 
 	auto source_extension = source_path.extension().string();
 	auto target_extension = target_path.extension().string();
