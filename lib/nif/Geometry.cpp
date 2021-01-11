@@ -3,8 +3,6 @@ BodySlide and Outfit Studio
 See the included LICENSE file
 */
 
-#include <fplus/fplus.hpp>
-
 #include "Geometry.h"
 #include "Skin.h"
 #include "Nodes.h"

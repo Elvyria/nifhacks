@@ -18,17 +18,14 @@ if(MSVC)
 endif()
 
 find_package(fmt CONFIG REQUIRED)
-find_package(Boost REQUIRED COMPONENTS filesystem)
-find_path(FPLUS_INCLUDE_DIRS "fplus/benchmark_session.hpp")
 find_package(tinyobjloader CONFIG REQUIRED)
 
 add_subdirectory(lib/nif)
 
 add_executable(nifhack src/main.cpp)
+target_compile_features(nifhack PRIVATE cxx_std_17)
 
 target_link_libraries(nifhack PRIVATE fmt::fmt)
-target_link_libraries(nifhack PRIVATE Boost::boost Boost::filesystem)
 target_link_libraries(nifhack PRIVATE tinyobjloader::tinyobjloader)
-target_include_directories(nifhack PRIVATE ${FPLUS_INCLUDE_DIRS})
 
 target_link_libraries(nifhack PUBLIC bnos-nif)
