@@ -33,25 +33,96 @@ int transfer_vertices(const std::string &obj_filename, const std::string &nif_fi
 	auto nifile = NifFile(nif_filename);
 	auto nishapes = nifile.GetShapes();
 
+	std::vector<NiShape*> identical_shapes;
+
 	for (auto nishape : nishapes) {
 		auto vertices = nishape->get_vertices();
 
-		if (vertices && vertices->size() == attributes.vertices.size() / 3)
-		{
-			std::vector<Vector3> vertices;
-			vertices.reserve(attributes.vertices.size() / 3);
-
-			for (size_t i = 0; i < attributes.vertices.size(); i += 3) {
-				vertices.emplace_back(
-						attributes.vertices[i],
-						attributes.vertices[i + 1],
-						attributes.vertices[i + 2]);
-			}
-
-			nishape->set_vertices(vertices);
-
-			break;
+		if (vertices && vertices->size() == attributes.vertices.size() / 3) {
+			identical_shapes.emplace_back(nishape);
 		}
+	}
+
+	NiShape* nishape;
+
+	// TODO: Sideeffects
+	if (identical_shapes.size() == 0)
+	{
+		fmt::print("Couldn't find a shape with the same ammount of vertices. Expected: {}", attributes.vertices.size());
+
+		return 1;
+	}
+	else if (identical_shapes.size() > 1)
+	{
+		fmt::print("\n");
+
+		for (size_t i = 0; i < identical_shapes.size(); i++) {
+			fmt::print(GREEN "{}" WHITE ": {}\n", i, identical_shapes[i]->GetName());
+		}
+
+		fmt::print("\nMultiple shapes with the same amount of vertices where found.\nEnter the number of shape, which will acquire all data.\n");
+
+		int index;
+		std::cin >> index;
+
+		if (index >= 0 && index < identical_shapes.size())
+			nishape = identical_shapes[index];
+		else
+			return 1;
+	}
+	else if (identical_shapes.size() == 1)
+	{
+		nishape = identical_shapes[0];
+	}
+
+	// TODO: Separate
+
+	auto vertices = nishape->get_vertices();
+
+	if (vertices && vertices->size() == attributes.vertices.size() / 3)
+	{
+		std::vector<Vector3> vertices;
+		vertices.reserve(attributes.vertices.size() / 3);
+
+		for (size_t i = 0; i < attributes.vertices.size(); i += 3) {
+			vertices.emplace_back(
+					attributes.vertices[i],
+					attributes.vertices[i + 1],
+					attributes.vertices[i + 2]);
+		}
+
+		nishape->set_vertices(vertices);
+	}
+
+	auto normals = nishape->get_normals(false);
+
+	if (normals && normals->size() == attributes.normals.size() / 3) {
+		std::vector<Vector3> normals;
+		normals.reserve(attributes.normals.size() / 3);
+
+		for (size_t i = 0; i < attributes.vertices.size(); i += 3) {
+			normals.emplace_back(
+					attributes.normals[i],
+					attributes.normals[i + 1],
+					attributes.normals[i + 2]);
+		}
+
+		nishape->set_normals(normals);
+	}
+
+	auto uv = nishape->get_uv();
+
+	if (uv && uv->size() == attributes.texcoords.size() / 2) {
+		std::vector<Vector2> uv;
+		uv.reserve(attributes.texcoords.size() / 2);
+
+		for (size_t i = 0; i < attributes.vertices.size(); i += 2) {
+			uv.emplace_back(
+					attributes.texcoords[i],
+					attributes.texcoords[i + 1]);
+		}
+
+		nishape->set_uv(uv);
 	}
 
 	nifile.Save(nif_filename + ".nif");
