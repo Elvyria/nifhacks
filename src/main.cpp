@@ -119,7 +119,7 @@ int transfer_vertices(const std::string &obj_filename, const std::string &nif_fi
 		for (size_t i = 0; i < attributes.vertices.size(); i += 2) {
 			uv.emplace_back(
 					attributes.texcoords[i],
-					attributes.texcoords[i + 1]);
+					1.0 - attributes.texcoords[i + 1]);
 		}
 
 		nishape->set_uv(uv);
