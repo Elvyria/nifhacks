@@ -8,27 +8,25 @@ endif()
 
 project(
   nifhacks
-  VERSION 0.1
+  VERSION 0.2
   DESCRIPTION ""
   LANGUAGES CXX)
 
 if(MSVC)
-  add_definitions("/bigobj")
-  add_definitions("/EHsc")
+  add_compile_options(/EHsc /bigobj)
 endif()
 
 find_package(fmt CONFIG REQUIRED)
-find_package(Boost REQUIRED COMPONENTS filesystem)
-find_path(FPLUS_INCLUDE_DIRS "fplus/benchmark_session.hpp")
+find_package(Boost REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 
 add_subdirectory(lib/nif)
 
-add_executable(nifhack src/main.cpp)
+add_executable(nifhacks src/main.cpp)
 
-target_link_libraries(nifhack PRIVATE fmt::fmt)
-target_link_libraries(nifhack PRIVATE Boost::boost Boost::filesystem)
-target_link_libraries(nifhack PRIVATE tinyobjloader::tinyobjloader)
-target_include_directories(nifhack PRIVATE ${FPLUS_INCLUDE_DIRS})
+target_compile_features(nifhacks PRIVATE cxx_std_17)
 
-target_link_libraries(nifhack PUBLIC bnos-nif)
+target_link_libraries(nifhacks PRIVATE fmt::fmt-header-only)
+target_link_libraries(nifhacks PRIVATE tinyobjloader::tinyobjloader)
+target_link_libraries(nifhacks PRIVATE Boost::boost)
+target_link_libraries(nifhacks PRIVATE bnos-nif)

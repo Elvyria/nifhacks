@@ -7,7 +7,5 @@
 ## Build Dependencies:
 #### VCPKG:
 * boost-algorithm
-* boost-filesystem
 * tinyobjloader
 * fmt
-* fplus
