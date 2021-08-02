@@ -101,7 +101,7 @@ int transfer_vertices(const std::string &obj_filename, const std::string &nif_fi
 		std::vector<Vector3> normals;
 		normals.reserve(attributes.normals.size() / 3);
 
-		for (size_t i = 0; i < attributes.vertices.size(); i += 3) {
+		for (size_t i = 0; i < attributes.normals.size(); i += 3) {
 			normals.emplace_back(
 					attributes.normals[i],
 					attributes.normals[i + 1],
@@ -117,7 +117,7 @@ int transfer_vertices(const std::string &obj_filename, const std::string &nif_fi
 		std::vector<Vector2> uv;
 		uv.reserve(attributes.texcoords.size() / 2);
 
-		for (size_t i = 0; i < attributes.vertices.size(); i += 2) {
+		for (size_t i = 0; i < attributes.texcoords.size(); i += 2) {
 			uv.emplace_back(
 					attributes.texcoords[i],
 					1.0 - attributes.texcoords[i + 1]);
