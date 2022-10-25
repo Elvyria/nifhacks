@@ -1,5 +1,4 @@
-add_library(
-  bnos-nif
+add_library(bnos-nif STATIC
   Animation.cpp
   BasicTypes.cpp
   ExtraData.cpp
@@ -16,3 +15,6 @@ add_library(
 
 target_include_directories(bnos-nif PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
                                            "${CMAKE_CURRENT_SOURCE_DIR}/utils")
+if(MSVC)
+	target_compile_options(bnos-nif PUBLIC "/EHsc" "/bigobj")
+endif()
