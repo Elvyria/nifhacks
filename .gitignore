@@ -1,6 +1,8 @@
 build
+files
 .cache
 compile_commands.json
+.vimspector.json
 
 # Prerequisites
 *.d
