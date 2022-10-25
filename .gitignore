@@ -1,5 +1,6 @@
 build
 files
+src/version.h
 .cache
 compile_commands.json
 .vimspector.json

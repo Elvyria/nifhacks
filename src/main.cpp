@@ -13,12 +13,22 @@
 #include <NifFile.h>
 
 #include "format.h"
+#include "version.h"
 
 namespace fs = std::filesystem;
 
 #define WHITE "\033[0m"
 #define RED   "\033[31m"
 #define GREEN "\033[32m"
+
+struct CLIOptions {
+	fs::path input_file;
+	fs::path output_file;
+	bool skin;
+	bool overwrite;
+};
+
+CLIOptions options = CLIOptions();
 
 Vector3 transform_vertice(Vector3 v, MatTransform t, float w) {
 	return t.rotation * (v * t.scale) + t.translation * w;
@@ -51,6 +61,7 @@ std::vector<Vector3> skin_vertices(NifFile &nifile, NiShape &shape, bool inverse
 	return transforms;
 }
 
+// TODO: Optimize with type cast
 void transfer_attributes(const tinyobj::attrib_t &attributes, NiShape &shape) {
 	auto vertices = shape.get_vertices();
 
@@ -167,34 +178,34 @@ void export_shape(NiShape &shape, std::ostream &stream) {
 	fmt::print(stream, "\n");
 }
 
-int obj_to_nif(const std::string &obj_filename, const std::string &nif_filename, bool skin = false) {
+int obj_to_nif(const std::string &obj_filename, const std::string &nif_filename) {
 	tinyobj::attrib_t attributes;
-	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::shape_t> obj_shapes;
 
 	std::string err;
 
-	if (!tinyobj::LoadObj(&attributes, &shapes, nullptr, &err, obj_filename.c_str())) {
+	if (!tinyobj::LoadObj(&attributes, &obj_shapes, nullptr, &err, obj_filename.c_str())) {
 		std::cerr << err << std::endl;
 
 		return 1;
 	}
 
 	auto nifile = NifFile(nif_filename);
-	auto nishapes = nifile.GetShapes();
+	auto nif_shapes = nifile.GetShapes();
 
 	std::vector<NiShape*> identical_shapes;
 
-	for (auto nishape : nishapes) {
-		auto vertices = nishape->get_vertices();
+	for (auto shape : nif_shapes) {
+		auto vertices = shape->get_vertices();
 
 		if (vertices && vertices->size() == attributes.vertices.size() / 3) {
-			identical_shapes.emplace_back(nishape);
+			identical_shapes.emplace_back(shape);
 		}
 	}
 
 	if (identical_shapes.size() == 0)
 	{
-		fmt::print("Couldn't find a shape with the same ammount of vertices. Expected: {}", attributes.vertices.size());
+		fmt::print("Couldn't find a shape with the same ammount of vertices.\nExpected: {}\n", attributes.vertices.size());
 
 		return 1;
 	}
@@ -224,7 +235,7 @@ int obj_to_nif(const std::string &obj_filename, const std::string &nif_filename,
 	transfer_attributes(attributes, *shape);
 
 	// TODO: Optimize with SIMD
-	if (skin) {
+	if (options.skin) {
 		auto vertices = *shape->get_vertices();
 
 		for (size_t i = 0; i < transforms.size(); i++) {
@@ -234,12 +245,20 @@ int obj_to_nif(const std::string &obj_filename, const std::string &nif_filename,
 		shape->set_vertices(vertices);
 	}
 
-	nifile.Save(nif_filename + ".nif");
+	auto export_name = nif_filename;
+
+	if (!options.overwrite) {
+		export_name += ".nif";
+	}
+
+	nifile.Save(export_name);
+
+	fmt::print("Successfully transfered coordinates to " GREEN "{}\n" WHITE, export_name);
 
 	return 0;
 }
 
-int nif_to_obj(const std::string &nif_filename, const std::string &obj_filename, bool skin = false) {
+int nif_to_obj(const std::string &nif_filename, const std::string &obj_filename) {
 	if (fs::exists(obj_filename)) {
 		fmt::print(RED "Warning! Target already exists and will be overwritten.\n" WHITE);
 	}
@@ -279,7 +298,7 @@ int nif_to_obj(const std::string &nif_filename, const std::string &obj_filename,
 	}
 
 	// TODO: Optimize with SIMD
-	if (skin) {
+	if (options.skin) {
 		auto transforms = skin_vertices(nifile, *shape);
 		auto vertices = *shape->get_vertices();
 
@@ -293,6 +312,8 @@ int nif_to_obj(const std::string &nif_filename, const std::string &obj_filename,
 	std::ofstream obj_stream(obj_filename, std::ios::out);
 	export_shape(*shape, obj_stream);
 
+	fmt::print("Successfully exported " GREEN "{}" WHITE " to " GREEN "{}\n" WHITE, shape->GetName(), obj_filename);
+
 	return 0;
 }
 
@@ -300,49 +321,32 @@ int main(int argc, char *argv[]) {
 
 	CLI::App app { "Janky tool that (sometimes) get things done for your nif-needs\n" };
 
-	fs::path input_file;
-	app.add_option("INPUT", input_file)
+	app.add_option("INPUT", options.input_file)
 		->option_text("    *.nif *.obj")
 		->required(true)
 		->check(CLI::ExistingFile);
 
-	fs::path output_file;
-	app.add_option("OUTPUT", output_file)
+	app.add_option("OUTPUT", options.output_file)
 		->option_text("   *.obj *.nif")
 		->required(true);
 
-	bool transform { false };
-	app.add_flag("-s,--skin", transform, "Apply skin transforms to shape");
-
-	// TODO: Add overwrite option
-	// bool overwrite { false };
-	// app.add_flag("-i,--in-place", overwrite, "Modify file in place");
-
-	// TODO: Add version flag
-	// bool version { false }
-	// app.add_flag("-v,--version", version, "");
+	app.add_flag("-s,--skin", options.skin, "Apply skin transforms to shape");
+	app.add_flag("-i,--in-place", options.overwrite, "Modify file in place");
+	app.set_version_flag("-v,--version", fmt::format("nifhacks {:d}.{:d}.{:d}", NIFHACKS_VERSION_MAJOR, NIFHACKS_VERSION_MINOR, NIFHACKS_VERSION_PATCH));
 
 	CLI11_PARSE(app, argc, argv);
 
-	auto input_ext = input_file.extension();
-	auto output_ext = output_file.extension();
+	auto input_ext = options.input_file.extension();
+	auto output_ext = options.output_file.extension();
 
 	if (input_ext == ".obj" && output_ext == ".nif")
 	{
-		obj_to_nif(input_file.string(), output_file.string(), transform);
-
-		fmt::print("Done!");
-
-		return 0;
+		return obj_to_nif(options.input_file.string(), options.output_file.string());
 	}
 
 	if (input_ext == ".nif" && output_ext == ".obj")
 	{
-		nif_to_obj(input_file.string(), output_file.string(), transform);
-
-		fmt::print("Done!");
-
-		return 0;
+		return nif_to_obj(options.input_file.string(), options.output_file.string());
 	}
 
 	std::cerr << app.help() << std::flush;

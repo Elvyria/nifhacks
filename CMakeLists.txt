@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(nifhacks LANGUAGES CXX)
+project(nifhacks VERSION   0.2.0
+	             LANGUAGES CXX)
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in"
+	           "${CMAKE_CURRENT_SOURCE_DIR}/src/version.h")
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
